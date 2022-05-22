@@ -46,7 +46,6 @@ qiime dada2 denoise-paired \
 --o-representative-sequences rep-seqs-its.qza \
 --o-denoising-stats denoising-stats-its.qza
 
-
 #TAXONOMIC ANALYSIS
 #SILVA 16S 515/806:
 qiime feature-classifier classify-sklearn \
@@ -72,7 +71,6 @@ qiime feature-classifier classify-sklearn \
 qiime metadata tabulate \
 --m-input-file unite-its-tax.qza \
 --o-visualization taxonomy-its.qzv
-
 
 #REMOVE UNWANTED TAXA 16S (A POSTERIORI)
 qiime taxa filter-table \
@@ -136,7 +134,6 @@ qiime metadata tabulate \
 --m-input-file denoising-stats-16s.qza \
 --o-visualization denoising-stats-16s.qzv
 
-
 qiime feature-table summarize \
 --i-table table-its.qza \
 --o-visualization table-its.qzv \
@@ -149,7 +146,8 @@ qiime feature-table tabulate-seqs \
 qiime metadata tabulate \
 --m-input-file denoising-stats-its.qza \
 --o-visualization denoising-stats-its.qzv
-GENERATE A TREE FOR PHYLOGENETIC DIVERSITY ANALYSES 
+
+#GENERATE A TREE FOR PHYLOGENETIC DIVERSITY ANALYSES 
 qiime phylogeny align-to-tree-mafft-fasttree \
 --i-sequences final-filtered-rep-seqs-16s.qza \
 --o-alignment aligned-rep-seqs-16s.qza \
@@ -163,7 +161,6 @@ qiime phylogeny align-to-tree-mafft-fasttree \
 --o-masked-alignment masked-aligned-rep-seqs-its.qza \
 --o-tree unrooted-tree-its.qza \
 --o-rooted-tree rooted-tree-its.qza
-
 
 #ALPHA AND BETA DIVERSITY ANALYSES
 #16S:
