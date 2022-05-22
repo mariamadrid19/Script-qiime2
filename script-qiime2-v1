@@ -1,0 +1,94 @@
+#!/bin/bash
+
+#SBATCH --job-name=descargar_secuencias_St_Louis
+#SBATCH -p medium
+#SBATCH -N 1
+#SBATCH -n 4
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=80000
+#SBATCH --time=90:00:00
+#SBATCH --mail-user=ma.madrid@uniandes.edu.co
+#SBATCH --mail-type=ALL
+#SBATCH -o descargar_secuencias.out
+
+wget -r https://htcf.wustl.edu/files/5dG0YjeZ/
+
+#Importar datos demultiplexados
+#Hay dos archivos fastq.gz por cada muestra, cada uno con los reads F y R de dicha muestra
+#El nombre del archivo incluye el sample-id, el barcode, el número de línea (lane), 
+#dirección del read (R1 o R2) y número de secuencias
+
+qiime tools import \
+--type 'SampleData[PairedEndSequencesWithQuality]' \
+--input-path reads_16s \
+--input-format CasavaOneEightSingleLanePerSampleDirFmt \
+--output-path demux-paired-end-16s.qza
+
+qiime tools import \
+--type 'SampleData[PairedEndSequencesWithQuality]' \
+--input-path reads_its \
+--input-format CasavaOneEightSingleLanePerSampleDirFmt \
+--output-path demux-paired-end-its.qza
+
+#Analizar la calidad de los datos con plots de calidad (qzv)
+qiime demux summarize \
+--i-data demux-paired-end-16s.qza \
+--o-visualization demux-16s.qzv
+
+qiime demux summarize \
+--i-data demux-paired-end-its.qza \
+--o-visualization demux-its.qzv
+
+#Con esos plots se hace el paso de denoising, eliminar errores de secuenciación, 
+#escogiendo los parámetros de recorte (trim, primeras bases) y truncado (trunc, últimas bases)
+#Paquete DADA2 es mejor que DEBLUR (Pero es más lento)
+qiime dada2 denoise-paired \
+--i-demultiplexed-seqs demux-paired-end-16s.qza \
+--p-trunc-len-f 233 \
+--p-trunc-len-r 0 \
+--p-trim-left-f 13 \
+--p-trim-left-r 13 \
+--o-table table-16s.qza \
+--o-representative-sequences rep-seqs-16s.qza \
+--o-denoising-stats denoising-stats-16s.qza
+
+qiime dada2 denoise-paired \
+--i-demultiplexed-seqs demux-paired-end-its.qza \
+--p-trunc-len-f 242 \
+--p-trunc-len-r 191 \
+--p-trim-left-f 13 \
+--p-trim-left-r 13 \
+--o-table table-its.qza \
+--o-representative-sequences rep-seqs-its.qza \
+--o-denoising-stats denoising-stats-its.qza
+
+#Después se generan resúmenes de los artefactos
+#16S: 
+qiime feature-table summarize \
+--i-table table-16s.qza \
+--o-visualization table-16s.qzv \
+--m-sample-metadata-file sample-metadata-16s.tsv
+
+qiime feature-table tabulate-seqs \
+--i-data rep-seqs-16s.qza \
+--o-visualization rep-seqs-16s.qzv
+
+qiime metadata tabulate \
+--m-input-file denoising-stats-16s.qza \
+--o-visualization denoising-stats-16s.qzv
+
+#ITS:
+qiime feature-table summarize \
+--i-table table-its.qza \
+--o-visualization table-its.qzv \
+--m-sample-metadata-file sample-metadata-its.tsv
+
+qiime feature-table tabulate-seqs \
+--i-data rep-seqs-its.qza \
+--o-visualization rep-seqs-its.qzv
+    
+qiime metadata tabulate \
+--m-input-file denoising-stats-its.qza \
+--o-visualization denoising-stats-its.qzv
+
+
