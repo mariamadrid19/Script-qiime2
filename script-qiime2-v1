@@ -91,4 +91,63 @@ qiime metadata tabulate \
 --m-input-file denoising-stats-its.qza \
 --o-visualization denoising-stats-its.qzv
 
+#Taxonomic classifier using SILVA 16S 515/806:
+qiime feature-classifier classify-sklearn \
+--i-classifier silva-138-99-515-806-nb-classifier.qza \
+--i-reads rep-seqs-16s.qza \
+--o-classification silva-138-99-tax-515-806.qza
+
+#https://docs.qiime2.org/2021.11/data-resources/
+
+qiime metadata tabulate \
+--m-input-file silva-138-99-tax-515-806.qza \
+--o-visualization taxonomy-16s.qzv
+
+#REMOVE UNWANTED TAXA 16S:
+qiime taxa filter-table \
+--i-table table-16s.qza \
+--i-taxonomy silva-138-99-tax-515-806.qza \
+--p-include p__ \
+--p-exclude mitochondria,chloroplast \
+--o-filtered-table table-with-no-mitochondria-chloroplast-16s.qza
+
+qiime taxa filter-table \
+--i-table table-with-no-mitochondria-chloroplast-16s.qza \
+--i-taxonomy silva-138-99-tax-515-806.qza \
+--p-exclude "k__Archaea" \
+--o-filtered-table table-with-no-mitochondria-chloroplasts-archaea.qza
+
+qiime taxa filter-table \
+--i-table table-with-no-mitochondria-chloroplasts-archaea.qza \
+--i-taxonomy silva-138-99-tax-515-806.qza \
+--p-exclude "k__Eukaryota" \
+--o-filtered-table final-filtered-table.qza
+
+qiime feature-table summarize \
+--i-table final-filtered-table.qza \
+--o-visualization final-filtered-table-16s.qzv \
+--m-sample-metadata-file sample-metadata-its.tsv
+
+qiime taxa filter-seqs \
+--i-sequences rep-seqs-16s.qza \
+--i-taxonomy silva-138-99-tax-515-806.qza \
+--p-include p__ \
+--p-exclude mitochondria,chloroplast \
+--o-filtered-sequences rep-seqs-with-phyla-no-mitochondria-chloroplast.qza
+
+qiime taxa filter-seqs \
+--i-sequences rep-seqs-with-phyla-no-mitochondria-chloroplast.qza \
+--i-taxonomy silva-138-99-tax-515-806.qza \
+--p-exclude "k__Archaea" \
+--o-filtered-sequences rep-seqs-with-phyla-no-mitochondria-chloroplasts-archaea.qza
+
+qiime taxa filter-seqs \
+--i-sequences rep-seqs-with-phyla-no-mitochondria-chloroplasts-archaea.qza \
+--i-taxonomy silva-138-99-tax-515-806.qza \
+--p-exclude "k__Eukaryota" \
+--o-filtered-sequences final-filtered-rep-seqs-16s.qza
+
+qiime feature-table tabulate-seqs \
+--i-data final-filtered-rep-seqs-16s.qza \
+--o-visualization final-filtered-rep-seqs-16s.qzv
 
