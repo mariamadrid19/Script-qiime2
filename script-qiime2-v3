@@ -1,4 +1,5 @@
 #!/bin/bash
+
 #SCRIPT para análisis de secuencias sin tener en cuenta los cultivos iniciadores y todas las horas muestreadas de la fermentación
 
 #IMPORT THE SEQUENCING DATA TO A QIIME2 ARTIFACT (QZA)
