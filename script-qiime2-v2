@@ -1,0 +1,283 @@
+#!/bin/bash
+#SCRIPT para análisis de secuencias sin tener en cuenta los cultivos iniciadores y solo las horas 50 y 100 de la fermentación. Todas las muestras (SW2-SW5, IW2-IW5)
+
+#IMPORT THE SEQUENCING DATA TO A QIIME2 ARTIFACT (QZA)
+qiime tools import \
+--type 'SampleData[PairedEndSequencesWithQuality]' \
+--input-path reads_16s \
+--input-format CasavaOneEightSingleLanePerSampleDirFmt \
+--output-path demux-paired-end-16s.qza
+
+qiime tools import \
+--type 'SampleData[PairedEndSequencesWithQuality]' \
+--input-path reads_its \
+--input-format CasavaOneEightSingleLanePerSampleDirFmt \
+--output-path demux-paired-end-its.qza
+
+
+#ANALYZE THE QUALITY OF THE DATA WITH VISUALIZATIONS (QZV)
+qiime demux summarize \
+--i-data demux-paired-end-16s.qza \
+--o-visualization demux-16s.qzv
+
+qiime demux summarize \
+--i-data demux-paired-end-its.qza \
+--o-visualization demux-its.qzv
+
+
+#DENOISE THE DATA WITH DADA2
+qiime dada2 denoise-paired \
+--i-demultiplexed-seqs demux-paired-end-16s.qza \
+--p-trunc-len-f 233 \
+--p-trunc-len-r 249 \
+--p-trim-left-f 13 \
+--p-trim-left-r 13 \
+--o-table table-16s.qza \
+--o-representative-sequences rep-seqs-16s.qza \
+--o-denoising-stats denoising-stats-16s.qza
+
+qiime dada2 denoise-paired \
+--i-demultiplexed-seqs demux-paired-end-its.qza \
+--p-trunc-len-f 242 \
+--p-trunc-len-r 191 \
+--p-trim-left-f 13 \
+--p-trim-left-r 13 \
+--o-table table-its.qza \
+--o-representative-sequences rep-seqs-its.qza \
+--o-denoising-stats denoising-stats-its.qza
+
+
+#TAXONOMIC ANALYSIS
+#SILVA 16S 515/806:
+qiime feature-classifier classify-sklearn \
+--i-classifier silva-138-99-515-806-nb-classifier.qza \
+--i-reads rep-seqs-16s.qza \
+--o-classification silva-138-99-tax-515-806.qza
+
+qiime metadata tabulate \
+--m-input-file silva-138-99-tax-515-806.qza \
+--o-visualization taxonomy-16s.qzv
+
+#UNITE ITS:
+qiime feature-classifier fit-classifier-naive-bayes \
+--i-reference-reads unite-ver8-99-seqs.qza \
+--i-reference-taxonomy unite-ver8-99-tax.qza \
+--o-classifier unite-ver8-99-classifier-2021.qza
+
+qiime feature-classifier classify-sklearn \
+--i-classifier unite-ver8-99-classifier-2021.qza \
+--i-reads rep-seqs-its.qza \
+ --o-classification unite-its-tax.qza
+
+qiime metadata tabulate \
+--m-input-file unite-its-tax.qza \
+--o-visualization taxonomy-its.qzv
+
+
+#REMOVE UNWANTED TAXA 16S (A POSTERIORI)
+qiime taxa filter-table \
+--i-table table-16s.qza \
+--i-taxonomy silva-138-99-tax-515-806.qza \
+--p-include p__ \
+--p-exclude mitochondria,chloroplast \
+--o-filtered-table table-with-no-mitochondria-chloroplast-16s.qza
+
+qiime taxa filter-table \
+--i-table table-with-no-mitochondria-chloroplast-16s.qza \
+--i-taxonomy silva-138-99-tax-515-806.qza \
+--p-exclude "k__Archaea" \
+--o-filtered-table table-with-no-mitochondria-chloroplasts-archaea.qza
+
+qiime taxa filter-table \
+--i-table table-with-no-mitochondria-chloroplasts-archaea.qza \
+--i-taxonomy silva-138-99-tax-515-806.qza \
+--p-exclude "k__Eukaryota" \
+--o-filtered-table final-filtered-table-16s.qza
+
+qiime taxa filter-seqs \
+--i-sequences rep-seqs-16s.qza \
+--i-taxonomy silva-138-99-tax-515-806.qza \
+--p-include p__ \
+--p-exclude mitochondria,chloroplast \
+--o-filtered-sequences rep-seqs-with-phyla-no-mitochondria-chloroplast.qza
+
+qiime taxa filter-seqs \
+--i-sequences rep-seqs-with-phyla-no-mitochondria-chloroplast.qza \
+--i-taxonomy silva-138-99-tax-515-806.qza \
+--p-exclude "k__Archaea" \
+--o-filtered-sequences rep-seqs-with-phyla-no-mitochondria-chloroplasts-archaea.qza
+
+qiime taxa filter-seqs \
+--i-sequences rep-seqs-with-phyla-no-mitochondria-chloroplasts-archaea.qza \
+--i-taxonomy silva-138-99-tax-515-806.qza \
+--p-exclude "k__Eukaryota" \
+--o-filtered-sequences final-filtered-rep-seqs-16s.qza
+
+qiime feature-table tabulate-seqs \
+--i-data final-filtered-rep-seqs-16s.qza \
+--o-visualization final-filtered-rep-seqs-16s.qzv
+
+GENERATE SUMMARIES OF THE ARTIFACTS
+qiime feature-table summarize \
+--i-table final-filtered-table-16s.qza \
+--o-visualization filtered-table-16s.qzv \
+--m-sample-metadata-file sample-metadata-16s.tsv
+
+qiime feature-table summarize \
+--i-table table-16s.qza \
+--o-visualization table-16s.qzv \
+--m-sample-metadata-file sample-metadata-16s.tsv
+
+qiime feature-table tabulate-seqs \
+--i-data rep-seqs-16s.qza \
+--o-visualization rep-seqs-16s.qzv
+
+qiime metadata tabulate \
+--m-input-file denoising-stats-16s.qza \
+--o-visualization denoising-stats-16s.qzv
+
+
+qiime feature-table summarize \
+--i-table table-its.qza \
+--o-visualization table-its.qzv \
+--m-sample-metadata-file sample-metadata-its.tsv
+
+qiime feature-table tabulate-seqs \
+--i-data rep-seqs-its.qza \
+--o-visualization rep-seqs-its.qzv
+    
+qiime metadata tabulate \
+--m-input-file denoising-stats-its.qza \
+--o-visualization denoising-stats-its.qzv
+GENERATE A TREE FOR PHYLOGENETIC DIVERSITY ANALYSES 
+qiime phylogeny align-to-tree-mafft-fasttree \
+--i-sequences final-filtered-rep-seqs-16s.qza \
+--o-alignment aligned-rep-seqs-16s.qza \
+--o-masked-alignment masked-aligned-rep-seqs-16s.qza \
+--o-tree unrooted-tree-16s.qza \
+--o-rooted-tree rooted-tree-16s.qza
+
+qiime phylogeny align-to-tree-mafft-fasttree \
+--i-sequences rep-seqs-its.qza \
+--o-alignment aligned-rep-seqs-its.qza \
+--o-masked-alignment masked-aligned-rep-seqs-its.qza \
+--o-tree unrooted-tree-its.qza \
+--o-rooted-tree rooted-tree-its.qza
+
+
+#ALPHA AND BETA DIVERSITY ANALYSES
+#16S:
+qiime diversity core-metrics-phylogenetic \
+--i-phylogeny rooted-tree-16s.qza \
+--i-table final-filtered-table-16s.qza \
+--p-sampling-depth 32746 \
+--m-metadata-file sample-metadata-16s.tsv \
+--output-dir core-metrics-results-16s
+
+qiime diversity alpha-group-significance \
+--i-alpha-diversity core-metrics-results-16s/faith_pd_vector.qza \
+--m-metadata-file sample-metadata-16s.tsv \
+--o-visualization core-metrics-results-16s/faith-pd-group-significance.qzv
+
+qiime diversity alpha-group-significance \
+--i-alpha-diversity core-metrics-results-16s/evenness_vector.qza \
+--m-metadata-file sample-metadata-16s.tsv \
+--o-visualization core-metrics-results-16s/evenness-group-significance.qzv
+
+qiime diversity beta-group-significance \
+--i-distance-matrix core-metrics-results-16s/unweighted_unifrac_distance_matrix.qza \
+--m-metadata-file sample-metadata-16s.tsv \
+--m-metadata-column fermentation_type \
+ --o-visualization core-metrics-results-16s/unweighted-unifrac-fermentation-type-significance.qzv \
+--p-pairwise
+
+qiime diversity beta-group-significance \
+--i-distance-matrix core-metrics-results-16s/unweighted_unifrac_distance_matrix.qza \
+--m-metadata-file sample-metadata-16s.tsv \
+--m-metadata-column barrel_site \
+--o-visualization core-metrics-results-16s/unweighted-unifrac-barrel_site-group-significance.qzv \
+--p-pairwise
+
+qiime emperor plot \
+--i-pcoa core-metrics-results-16s/unweighted_unifrac_pcoa_results.qza \
+--m-metadata-file sample-metadata-16s.tsv \
+--p-custom-axes fermentation_time \
+--o-visualization core-metrics-results-16s/unweighted-unifrac-emperor-fermentation_time.qzv
+
+qiime emperor plot \
+--i-pcoa core-metrics-results-16s/bray_curtis_pcoa_results.qza \
+--m-metadata-file sample-metadata-16s.tsv \
+--p-custom-axes fermentation_time \
+--o-visualization core-metrics-results-16s/bray-curtis-emperor-fermentation_time.qzv
+
+#ITS:
+qiime diversity core-metrics-phylogenetic \
+--i-phylogeny rooted-tree-its.qza \
+--i-table table-its.qza \
+--p-sampling-depth 5466 \
+--m-metadata-file sample-metadata-its.tsv \
+--output-dir core-metrics-results-its
+
+qiime diversity alpha-group-significance \
+--i-alpha-diversity core-metrics-results-its/faith_pd_vector.qza \
+--m-metadata-file sample-metadata-its.tsv \
+--o-visualization core-metrics-results-its/faith-pd-group-significance.qzv
+
+qiime diversity alpha-group-significance \
+--i-alpha-diversity core-metrics-results-its/evenness_vector.qza \
+--m-metadata-file sample-metadata-its.tsv \
+--o-visualization core-metrics-results-its/evenness-group-significance.qzv
+
+qiime diversity beta-group-significance \
+--i-distance-matrix core-metrics-results-its/unweighted_unifrac_distance_matrix.qza \
+--m-metadata-file sample-metadata-its.tsv \
+--m-metadata-column fermentation_type \
+ --o-visualization core-metrics-results-its/unweighted-unifrac-fermentation-type-significance.qzv \
+--p-pairwise
+
+qiime diversity beta-group-significance \
+--i-distance-matrix core-metrics-results-its/unweighted_unifrac_distance_matrix.qza \
+--m-metadata-file sample-metadata-its.tsv \
+--m-metadata-column barrel_site \
+--o-visualization core-metrics-results-its/unweighted-unifrac-barrel_site-group-significance.qzv \
+--p-pairwise
+
+qiime emperor plot \
+--i-pcoa core-metrics-results-its/unweighted_unifrac_pcoa_results.qza \
+--m-metadata-file sample-metadata-its.tsv \
+--p-custom-axes fermentation_time \
+--o-visualization core-metrics-results-its/unweighted-unifrac-emperor-fermentation_time.qzv
+
+qiime emperor plot \
+--i-pcoa core-metrics-results-its/bray_curtis_pcoa_results.qza \
+--m-metadata-file sample-metadata-its.tsv \
+--p-custom-axes fermentation_time \
+--o-visualization core-metrics-results-its/bray-curtis-emperor-fermentation_time.qzv
+
+#ALPHA RAREFACTION PLOTTING
+qiime diversity alpha-rarefaction \
+--i-table final-filtered-table-16s.qza \
+--i-phylogeny rooted-tree-16s.qza \
+--p-max-depth 40750 \
+--m-metadata-file sample-metadata-16s.tsv \
+--o-visualization alpha-rarefaction-16s.qzv
+
+qiime diversity alpha-rarefaction \
+--i-table table-its.qza \
+--i-phylogeny rooted-tree-its.qza \
+--p-max-depth 12303 \
+--m-metadata-file sample-metadata-its.tsv \
+--o-visualization alpha-rarefaction-its.qzv
+
+#TAXONOMY BARPLOTS:
+qiime taxa barplot \
+--i-table final-filtered-table-16s.qza \
+--i-taxonomy silva-138-99-tax-515-806.qza \
+--m-metadata-file sample-metadata-16s.tsv \
+--o-visualization taxa-bar-plots-16s.qzv
+
+qiime taxa barplot \
+--i-table table-its.qza \
+--i-taxonomy unite-its-tax.qza \
+--m-metadata-file sample-metadata-its.tsv \
+--o-visualization taxa-bar-plots-its.qzv
