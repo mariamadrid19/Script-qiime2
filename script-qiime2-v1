@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#Script de shell para el uso de QIIME2 con secuencias propias
+
 #SBATCH --job-name=descargar_secuencias_St_Louis
 #SBATCH -p medium
 #SBATCH -N 1
