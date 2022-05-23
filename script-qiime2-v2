@@ -1,4 +1,5 @@
 #!/bin/bash
+#Script de shell para el uso de QIIME2 con secuencias propias
 #SCRIPT para análisis de secuencias sin tener en cuenta los cultivos iniciadores y solo las horas 50 y 100 de la fermentación. Todas las muestras (SW2-SW5, IW2-IW5)
 
 #IMPORT THE SEQUENCING DATA TO A QIIME2 ARTIFACT (QZA)
