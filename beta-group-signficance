@@ -1,0 +1,21 @@
+#!/bin/bash
+
+#Script de shell para el uso de QIIME2, beta-group-signficance para métrica Bray Curtis
+
+conda activate qiime2-2021.11
+
+qiime diversity beta-group-significance \
+  --i-distance-matrix /mariamadrid/Documents/tesis/metagenomica/strict-denoising/no_SC_analysis/core-metrics-results-16s/bray_curtis_distance_matrix.qza
+  --m-metadata-file sample-metadata-16s.tsv
+  --m-metadata-column fermentation_type
+  --p-method 'anosim'
+  --p-no-pairwise
+  --o-visualization core-metrics-results-16s/bray_curtis-fermentation-type-significance.qzv \
+  
+  qiime diversity beta-group-significance \
+  --i-distance-matrix /mariamadrid/Documents/tesis/metagenomica/strict-denoising/no_SC_analysis/core-metrics-results-its/bray_curtis_distance_matrix.qza
+  --m-metadata-file sample-metadata-its.tsv
+  --m-metadata-column fermentation_type
+  --p-method 'anosim'
+  --p-no-pairwise
+  --o-visualization core-metrics-results-its/bray_curtis-fermentation-type-significance.qzv \
