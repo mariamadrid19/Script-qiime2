@@ -13,7 +13,7 @@ qiime diversity beta-group-significance \
   --o-visualization core-metrics-results-16s/bray_curtis-fermentation-type-significance.qzv
   
   qiime diversity beta-group-significance \
-  --i-distance-matrix core-metrics-results-its/bray_curtis_distance_matrix.qza
+  --i-distance-matrix core-metrics-results-its/bray_curtis_distance_matrix.qza \
   --m-metadata-file sample-metadata-its.tsv \
   --m-metadata-column fermentation_type \
   --p-method 'anosim' \
@@ -29,7 +29,7 @@ qiime diversity beta-group-significance \
   --o-visualization core-metrics-results-16s/bray-curtis-fermentation-time-significance.qzv
   
   qiime diversity beta-group-significance \
-  --i-distance-matrix core-metrics-results-its/bray_curtis_distance_matrix.qza
+  --i-distance-matrix core-metrics-results-its/bray_curtis_distance_matrix.qza \
   --m-metadata-file sample-metadata-its.tsv \
   --m-metadata-column fermentation_time \
   --p-method 'anosim' \
